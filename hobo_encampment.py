@@ -206,10 +206,6 @@ def move_player(direction,distance=1):
             else:
                 player_pos = undeveloped_levels[place-1]
         grid[player_row][player_col] = player_pos
-        print(player_row)
-        print(player_col)
-        print(new_row)
-        print(new_col)
         player_pos = grid[new_row][new_col]
         grid[new_row][new_col] = "G"
         player_row = new_row
