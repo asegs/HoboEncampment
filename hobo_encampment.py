@@ -669,14 +669,14 @@ def men_at_work(turns):
             if counter>20:
                 break
     loggers = stats["People logging"]
-    stats["Logs per turn"] = int(stats["People's happiness"]*0.1*loggers)
-    stats["Stored logs"]+=turns*stats["Logs per turn"]
+    stats["Logs per turn"] = int(stats["People's happiness"]*0.2*loggers)
+    stats["Stored logs"]+=(turns*stats["Logs per turn"])
     miners = stats["People mining"]
     stats["Stone per turn"] = int(stats["People's happiness"]*0.1*miners*stats["Quarries sum level"])
-    stats["Stored stone"]+=turns*stats["Stone per turn"]
+    stats["Stored stone"]+=(turns*stats["Stone per turn"])
     metalworkers = stats["People metalworking"]
     stats["Metal per turn"] = int(stats["People's happiness"]*0.1*miners*stats["Metalworks sum level"])
-    stats["Stored metal"]+=turns*stats["Metal per turn"]
+    stats["Stored metal"]+=(turns*stats["Metal per turn"])
     
 
 def status_gen():
@@ -914,7 +914,7 @@ while True:
     status_gen()
     if orig_status!=handler_status:
         stats["Status"] = handler_status
-    men_at_work(turns)
+    men_at_work(turns_passed)
     if stats["Health"]<0:
         exit()
     print(header)
