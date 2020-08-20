@@ -14,6 +14,7 @@ upgradeable = [".","x","*","@","t","l","h","s","f","F","g","n","r","R","C","q","
 map_width = 100
 map_height = 29
 grid = [["a" for i in range(map_width)] for j in range(map_height)]
+help_string = "You are represented by the letter G.  Your goal is to survive.\nMove around this map with WASD, being careful not to run out of water and food.\nPlant a garden or make a farm for food, and drink from streams for water.\nUse b to build structures, x to destroy them, and i to interact with them.  Use u to perform upgrades.\nOnce you reach the road and have appealing housing, workers will come to live with you.\nBuild fires by houses to achieve this, and connect to level 3+ paths.\nThey can only come on level 3 and above paths, and you will need these to access stored materials.\n\n\n"
 
 player_row = -1
 player_col = -1
@@ -22,7 +23,7 @@ stats = {"Status":"Hello.","Standing on":" ","Health":15,"Water":100,"Food":100,
 """
 upgrades array format is wood, stone, metal
 """
-upgrades = {"Path":[[2,0,0],[5,0,0],[5,3,0],[10,5,1]],"House":[[10,0,0],[10,5,0],[20,10,5],[50,25,20]],"Fire":[[3,1,0],[5,3,1]],"Garden":[[10,0,0],[10,5,0]],"Farm":[[15,0,0],[20,5,0],[25,10,3]],"Quarry":[[100,20,0],[250,50,10]],"Metalworks":[[250,100,10],[500,250,50]]}
+upgrades = {"Path":[[2,0,0],[5,2,0],[5,3,0],[10,5,1]],"House":[[10,0,0],[10,5,0],[20,10,5],[50,25,20]],"Fire":[[3,1,0],[5,3,1]],"Garden":[[10,0,0],[10,5,0]],"Farm":[[15,0,0],[20,5,0],[25,10,3]],"Quarry":[[100,20,0],[250,50,10]],"Metalworks":[[250,100,10],[500,250,50]]}
 
 
 def add_to_road(road,to_add=" "):
@@ -377,6 +378,14 @@ def interact():
             stats["Logs"] = 0
         stats["Status"] = "You work on an old project."
         return grid
+    if grid[new_row][new_col] in quarry_levels:
+        stats["Stone"]+=quarry_levels.index(grid[new_row][new_col])+1
+        if stats["Stone"]>3:
+            stats["Stone"] = 3
+    if grid[new_row][new_col] in metalworks_levels:
+        stats["Metal"]+=metalworks_levels.index(grid[new_row][new_col])+1
+        if stats["Metal"]>3:
+            stats["Metal"] = 3
     if grid[new_row][new_col] == " ":
         stats["Water"] = 100
     if grid[new_row][new_col] in garden_levels or grid[new_row][new_col] in farm_levels:
@@ -459,12 +468,34 @@ def upgrade_handler(string,levels,letter,new_row,new_col):
     chart = upgrades[string]
     index = levels.index(letter)
     result = apply_costs(chart,index)
-    if result:
+    if result==True:
         if letter in quarry_levels:
             stats["Quarries sum level"]+=1
         if letter in metalworks_levels:
             stats["Metalworks sum level"]+=1
         grid[new_row][new_col] = levels[levels.index(letter)+1]
+    else:
+        cost_arr = chart[index]
+        logs = 0
+        stone = 0
+        metal = 0
+        if cost_arr[0]>stats["Logs"]:
+            logs = cost_arr[0]-stats["Logs"]
+            stats["Logs"] = 0
+        else:
+            stats["Logs"]-=cost_arr[0]
+        if cost_arr[1]>stats["Stone"]:
+            stone = cost_arr[1]-stats["Stone"]
+            stats["Stone"] = 0
+        else:
+            stats["Stone"]-=cost_arr[1]
+        if cost_arr[2]>stats["Metal"]:
+            metal = cost_arr[2]-stats["Metal"]
+            stats["Metal"] = 0
+        else:
+            stats["Metal"]-=cost_arr[2]
+        todo = [letter,new_row,new_col,logs,stone,metal]
+        stats["Unfinished"].append(todo)
     return grid
 
 
@@ -660,9 +691,12 @@ def handler(choice):
         grid = upgrade()
     elif choice == "p":
         assign_people()
+    elif choice == "h":
+        print(help_string)
+        input("Press enter when done:")
     return grid
 
-
+print(help_string)
 choice = input("You are about to generate a random map based on some presets.  Do you want normal ('n'), thick forest ('f'), thin forest ('t'), islands ('i'), or swamp ('s')?:")
 spawns = 0
 spread = 0
