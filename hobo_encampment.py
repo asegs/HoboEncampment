@@ -20,7 +20,7 @@ help_string = "You are represented by the letter G.  Your goal is to survive.\nM
 player_row = -1
 player_col = -1
 player_pos = " "
-stats = {"Status":"Hello.","Standing on":" ","Health":15,"Water":100,"Food":100,"Turns without sleep":0,"Logs":0,"Stone":0,"Metal":0,"Stored logs":0,"Stored stone":0,"Stored metal":0,"House space":0,"Appeal":0,"Total people":0,"Unassigned people":0,"People logging":0,"People mining":0,"People metalworking":0,"People clearing":0,"Logs per turn":0,"Stone per turn":0,"Metal per turn":0,"Improvements per turn":0,"People's happiness":0,"Quarries sum level":0,"Metalworks sum level":0,"Road unlocked":False,"Unfinished":[]}
+stats = {"Status":"Hello.","Standing on":" ","Health":10,"Water":100,"Food":100,"Turns without sleep":0,"Logs":0,"Stone":0,"Metal":0,"Stored logs":0,"Stored stone":0,"Stored metal":0,"House space":0,"Appeal":0,"Total people":0,"Unassigned people":0,"People logging":0,"People mining":0,"People metalworking":0,"People clearing":0,"Logs per turn":0,"Stone per turn":0,"Metal per turn":0,"Improvements per turn":0,"People's happiness":0,"Quarries sum level":0,"Metalworks sum level":0,"Road unlocked":False,"Unfinished":[]}
 """
 upgrades array format is wood, stone, metal
 """
