@@ -645,7 +645,7 @@ def status_gen():
             stats["Status"] = "You twist your ankle."
             stats["Health"]-=1
         if random.random()<0.08:
-            stats["Status"] = "You find a huge bush of delcious strawberries."
+            stats["Status"] = "You find a huge bush of delicious strawberries."
             stats["Food"] = 100
 
 def handler(choice):
