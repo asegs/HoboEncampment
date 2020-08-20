@@ -1,22 +1,30 @@
-##from dataclasses import dataclass
 import random
-from os import system
+import time
+import datetime
 header = "    __  __ ____   ____   ____     ______ _   __ ______ ___     __  ___ ____   __  ___ ______ _   __ ______\n   / / / // __ \ / __ ) / __ \   / ____// | / // ____//   |   /  |/  // __ \ /  |/  // ____// | / //_  __/\n  / /_/ // / / // __  |/ / / /  / __/  /  |/ // /    / /| |  / /|_/ // /_/ // /|_/ // __/  /  |/ /  / /   \n / __  // /_/ // /_/ // /_/ /  / /___ / /|  // /___ / ___ | / /  / // ____// /  / // /___ / /|  /  / /    \n/_/ /_/ \____//_____/ \____/  /_____//_/ |_/ \____//_/  |_|/_/  /_//_/    /_/  /_//_____//_/ |_/  /_/     "
-path_levels = [".","x","*","@"]
+path_levels = [".","x","*","@","X"]
 house_levels = ["t","l","h","s","H"]
 undeveloped_levels = ["%","&","#"]
-paths = ["@","*","x",".","%","&","#"]
+paths = ["X","@","*","x",".","%","&","#"]
+improvable_paths = ["@","*","x",".","%","&","#"]
 fire_levels = ["f","F","B"]
-garden_levels = ["g","G","N"]
-farm_levels = ["r","R","c","C","p","P"]
+garden_levels = ["g","n","N"]
+farm_levels = ["r","R","C","P"]
+quarry_levels = ["q","Q","S"]
+metalworks_levels = ["m","M","U"]
+upgradeable = [".","x","*","@","t","l","h","s","f","F","g","n","r","R","C","q","Q","m","M"]
 map_width = 100
-map_height = 25
+map_height = 29
 grid = [["a" for i in range(map_width)] for j in range(map_height)]
 
 player_row = -1
 player_col = -1
 player_pos = " "
-stats = {"Health":10,"Water":100,"Food":100,"Turns without sleep":0,"Logs":0,"Unfinished":[]}
+stats = {"Status":"Hello.","Standing on":" ","Health":15,"Water":100,"Food":100,"Turns without sleep":0,"Logs":0,"Stone":0,"Metal":0,"Stored logs":0,"Stored stone":0,"Stored metal":0,"House space":0,"Appeal":0,"Total people":0,"Unassigned people":0,"People logging":0,"People mining":0,"People metalworking":0,"People clearing":0,"Logs per turn":0,"Stone per turn":0,"Metal per turn":0,"Improvements per turn":0,"People's happiness":0,"Quarries sum level":0,"Metalworks sum level":0,"Road unlocked":False,"Unfinished":[]}
+"""
+upgrades array format is wood, stone, metal
+"""
+upgrades = {"Path":[[2,0,0],[5,0,0],[5,3,0],[10,5,1]],"House":[[10,0,0],[10,5,0],[20,10,5],[50,25,20]],"Fire":[[3,1,0],[5,3,1]],"Garden":[[10,0,0],[10,5,0]],"Farm":[[15,0,0],[20,5,0],[25,10,3]],"Quarry":[[100,20,0],[250,50,10]],"Metalworks":[[250,100,10],[500,250,50]]}
 
 
 def add_to_road(road,to_add=" "):
@@ -154,7 +162,7 @@ def place_player():
         row = int(placement/map_width)
         col = placement-row*map_width
         count = count_borders(" ",row,col)
-        if count<=1:
+        if count<=1 and grid[row][col]!=" ":
             player_row = row
             player_col = col
             player_pos = grid[row][col]
@@ -168,6 +176,16 @@ def select_new(direction):
         global player_col
         new_row = player_row
         new_col = player_col
+        if stats["Turns without sleep"]>500:
+            choice = random.randint(0,3)
+            if choice == 3:
+                direction = "a"
+            elif choice == 2:
+                direction = "s"
+            elif choice == 1:
+                direction = "w"
+            else:
+                direction = "d"
         if direction == "a":
             new_row = player_row
             new_col = player_col-1
@@ -194,7 +212,8 @@ def move_player(direction,distance=1):
     try:
         original_tile = player_pos
         new_pos = grid[new_row][new_col]
-        if new_pos == " " or new_col<0 or new_row<0 or new_row>map_height or new_col>map_width or stats["Logs"]>3:
+        if new_pos == " " or new_col<0 or new_row<0 or new_row>map_height or new_col>map_width or stats["Logs"]>3 or stats["Stone"]>3 or stats["Metal"]>3:
+            stats["Status"] = "You are either overencumbered or trying to leave the map."
             return grid
         if player_pos in undeveloped_levels:
             stats["Logs"] += 1
@@ -213,11 +232,11 @@ def move_player(direction,distance=1):
         stats["Turns without sleep"] += paths.index(original_tile)
         return grid
     except:
-        print("Out of bounds")
+        stats["Status"] = "Out of bounds!"
         return grid
     
 
-def regrow(percent = 0.003):
+def regrow(percent = 0.001):
     global grid
     tiles = map_width*map_height
     chosen = []
@@ -248,43 +267,51 @@ def build():
     global player_pos
     global player_row
     global player_col
+    global stats
     if player_pos not in path_levels:
+        stats["Status"] = "You must be on a path to build."
         return grid
-    choice = input("Enter the structure to build: log holder ('l'), house ('h'), bridge ('b'), campfire ('c'), garden ('g'),farm ('f'), or enter to close:")
+    choice = input("Enter the structure to build: log holder ('l'), house ('h'), bridge ('b'), campfire ('c'), garden ('g'),farm ('f'), quarry ('q'), metalworks ('m'), river ('r') or enter to close:")
     pos = input("Enter the movement direction to build in: 'WASD'")
     coords = select_new(pos)
     new_row = coords[0]
     new_col = coords[1]
     if new_row == player_row and new_col == player_col:
+        stats["Status"] = "You're standing right there!"
         return grid
     try:
         tile = grid[new_row][new_col]
-        if tile == " ":
+        if tile == " " and choice != "b" and choice != "r":
+            stats["Status"] = "It sinks."
             return grid
         while tile in undeveloped_levels:
             stats["Turns without sleep"]+=paths.index(tile)
             tile = paths[paths.index(tile)-1]
         grid[new_row][new_col] = "."
     except:
+        stats["Status"] = "You can't build over there."
         return grid
     if choice == "l":
         grid = build_params(1,"0",new_row,new_col)
     elif choice == "h":
         grid = build_params(5,"t",new_row,new_col)
-    elif choice == "b" and stats["Logs"]>2 and grid[new_row][new_col] == " ":
-        stats["Logs"]-=3
-        grid[new_row][new_col] = "."
-    elif choice == "b" and grid[new_row][new_col] == " ":
-        todo = [".",new_row,new_col,3-stats["Logs"]]
-        stats["Unfinished"].append(todo)
-        grid[new_row][new_col] = "?"
-        stats["Logs"] = 0
+    elif choice == "b":
+        grid = build_params(3,".",new_row,new_col)
     elif choice == "c":
         grid = build_params(1,"f",new_row,new_col)
     elif choice == "g":
         grid = build_params(4,"g",new_row,new_col)
     elif choice == "f":
         grid = build_params(7,"r",new_row,new_col)
+    elif choice == "q":
+        grid = build_params(50,"q",new_row,new_col)
+        stats["Quarries sum level"]+=1
+    elif choice == "m":
+        grid = build_params(125,"m",new_row,new_col)
+        stats["Metalworks sum level"]+=1
+    elif choice == "r":
+        if if_borders(" ",new_row,new_col,True):
+            grid[new_row][new_col] = " "
     return grid
 
 
@@ -296,12 +323,6 @@ def pull_from_unfinished(row,col):
         index+=1
 
 
-def improve_structure():
-    global grid
-    global player_pos
-    global player_row
-    global player_col
-
 def destroy():
     global player_row
     global player_col
@@ -310,43 +331,433 @@ def destroy():
     new_row = coords[0]
     new_col = coords[1]
     if new_row == player_row and new_col == player_col:
+        stats["Status"] = "You cannot destroy yourself.  That way, at least."
         return grid
     if grid[new_row][new_col]=="?":
         del stats["Unfinished"][pull_from_unfinished(new_row,new_col)]
+    if grid[new_row][new_col] in quarry_levels:
+        level = quarry_levels[quarry_levels.index(grid[new_row][new_col])+1]
+        stats["Quarries sum level"]-=level
+    if grid[new_row][new_col] in metalworks_levels:
+        level = metalworks_levels[metalworks_levels.index(grid[new_row][new_col])+1]
+        stats["Metalworks sum level"]-=level
     grid[new_row][new_col] = "."
     return grid
 
 
-def handler(choice):
-    if choice == "a" or choice == "w" or choice == "s" or choice == "d":
-        grid = move_player(choice)
-    if choice == "b":
-        grid = build()
-    if choice == "x":
-        grid = destroy()
+def take_stored(stored_string,string,number):
+    if stats[stored_string]<number:
+        number = stats[stored_string]
+    stats[string]+=number
+    stats[stored_string]-=number
+
+def place_stored(stored_string,string,number):
+    if stats[string]<number:
+        number = stats[string]
+    stats[string]-=number
+    stats[stored_string]+=number
+
+def interact():
+    global player_row
+    global player_col
+    direction = input("What adjacent tile do you want to interact with? (WASD or ENTER to close):")
+    coords = select_new(direction)
+    new_row = coords[0]
+    new_col = coords[1]
+    if new_row == player_row and new_col == player_col:
+        stats["Status"] = "You scratch your head."
+        return grid
+    if grid[new_row][new_col] == "?":
+        unf_index = pull_from_unfinished(new_row,new_col)
+        todo = stats["Unfinished"][unf_index]
+        if stats["Logs"]>=todo[3]:
+            stats["Logs"]-=todo[3]
+            grid[new_row][new_col] = todo[0]
+            del stats["Unfinished"][unf_index]
+        else:
+            stats["Unfinished"][unf_index][3]-=stats["Logs"]
+            stats["Logs"] = 0
+        stats["Status"] = "You work on an old project."
+        return grid
+    if grid[new_row][new_col] == " ":
+        stats["Water"] = 100
+    if grid[new_row][new_col] in garden_levels or grid[new_row][new_col] in farm_levels:
+        stats["Food"] = 100
+    if grid[new_row][new_col] in house_levels:
+        stats["Turns without sleep"] = 0
+        stats["Health"] = 10
+    if grid[new_row][new_col].isnumeric():
+        count = int(grid[new_row][new_col])
+        choice = input("Place logs ('p') or take logs ('t')?:")
+        if choice == "p":
+            if count+stats["Logs"]>=9:
+                stats["Logs"]-=(9-count)
+                count = 9
+            else:
+                count+=stats["Logs"]
+                stats["Logs"] = 0
+        else:
+            stats["Logs"]+=count
+            count = 0
+        grid[new_row][new_col] = str(count)
+    if grid[new_row][new_col] in path_levels:
+        print("You can use level 3 and above paths to move materials mined by workers.")
+        if path_levels.index(grid[new_row][new_col])>=2:
+            while True:
+                selection = input("Do you want to take materials ('t'), place materials ('p'), or press enter to exit:")
+                if selection == "t":
+                    choice  = input("Do you want to take logs ('l'), stone ('s'), metal ('m'), or press enter to return:")
+                    number = input("How many do you want to take?:")
+                    if number.isnumeric():
+                        number = int(number)
+                    else:
+                        number = 0
+                    if choice == "l":
+                        take_stored("Stored logs","Logs",number)
+                    elif choice == "s":
+                        take_stored("Stored stone","Stone",number)
+                    elif choice == "m":
+                        take_stored("Stored metal","Metal",number)
+                if selection == "p":
+                    choice  = input("Do you want to place logs ('l'), stone ('s'), metal ('m'), or press enter to return:")
+                    number = input("How many do you want to place?:")
+                    if number.isnumeric():
+                        number = int(number)
+                    else:
+                        number = 0
+                    if choice == "l":
+                        place_stored("Stored logs","Logs",number)
+                    elif choice == "s":
+                        place_stored("Stored stone","Stone",number)
+                    elif choice == "m":
+                        place_stored("Stored metal","Metal",number)
+                else:
+                    break
     return grid
 
 
+def apply_costs(chart,index):
+    row = chart[index]
+    if stats["Logs"]>=row[0] and stats["Stone"]>=row[1] and stats["Metal"]>=row[2]:
+        stats["Logs"]-=row[0]
+        stats["Stone"]-=row[1]
+        stats["Metal"]-=row[2]
+        return True
+    else:
+        return False
+
+
+def path_3_check(row,col):
+    valid = False
+    for i in range(2,len(path_levels)):
+        valid = valid or if_borders(path_levels[i],row,col)
+    for i in range(0,len(house_levels)):
+        valid = valid or if_borders(house_levels[i],row,col)
+    return valid
+
+
+def upgrade_handler(string,levels,letter,new_row,new_col):
+    global grid
+    chart = upgrades[string]
+    index = levels.index(letter)
+    result = apply_costs(chart,index)
+    if result:
+        if letter in quarry_levels:
+            stats["Quarries sum level"]+=1
+        if letter in metalworks_levels:
+            stats["Metalworks sum level"]+=1
+        grid[new_row][new_col] = levels[levels.index(letter)+1]
+    return grid
+
+
+def upgrade():
+    global player_row
+    global player_col
+    global grid
+    direction = input("What adjacent tile do you want to upgrade? (WASD or ENTER to close):")
+    coords = select_new(direction)
+    new_row = coords[0]
+    new_col = coords[1]
+    if (new_row == player_row and new_col == player_col) or grid[new_row][new_col] == " ":
+        stats["Status"] = "That's either water or yourself.  Which are both perfect the way they are."
+        return grid
+    if grid[new_row][new_col] not in upgradeable:
+        stats["Status"] = "You can't upgrade that."
+        return grid
+    letter = grid[new_row][new_col]
+    if letter in path_levels:
+        chart = upgrades["Path"]
+        index = path_levels.index(letter)
+        if index==0:
+            result = apply_costs(chart,index)
+            if result:
+                grid[new_row][new_col] = path_levels[path_levels.index(letter)+1]
+        elif path_3_check(new_row,new_col):
+            result = apply_costs(chart,index)
+            if result:
+                grid[new_row][new_col] = path_levels[path_levels.index(letter)+1]
+                if new_row>=map_height-1:
+                    stats["Road unlocked"] = True
+        return grid
+    elif letter in house_levels:
+        return upgrade_handler("House",house_levels,letter,new_row,new_col)
+    elif letter in fire_levels:
+        return upgrade_handler("Fire",fire_levels,letter,new_row,new_col)
+    elif letter in garden_levels:
+        return upgrade_handler("Garden",garden_levels,letter,new_row,new_col)
+    elif letter in farm_levels:
+        return upgrade_handler("Farm",farm_levels,letter,new_row,new_col)
+    elif letter in quarry_levels:
+        return upgrade_handler("Quarry",quarry_levels,letter,new_row,new_col)
+    elif letter in metalworks_levels:
+        return upgrade_handler("Metalworks",metalworks_levels,letter,new_row,new_col)
+    return grid
+    
+
+def appeal_calc():
+    house_space = 0
+    appeal = 0
+    for row in range(0,map_height):
+        for col in range(0,map_width):
+            if grid[row][col] in house_levels:
+                house_size = house_levels.index(grid[row][col])+1
+                for i in range(0,len(fire_levels)):
+                    count = count_borders(fire_levels[i],row,col,True)
+                    appeal+=(count*(i+1))
+                appeal = appeal*house_size
+                house_space+=house_size
+    if not stats["Road unlocked"]:
+        appeal = 0
+    house_space-=stats["Total people"]
+    return [house_space,appeal]
+
+def happiness_calc():
+    happiness = 0
+    for row in range(0,map_height):
+        for col in range(0,map_width):
+            if grid[row][col] in farm_levels:
+                happiness += 3*(farm_levels.index(grid[row][col])+1)
+            if grid[row][col] in garden_levels:
+                happiness += 2*(garden_levels.index(grid[row][col])+1)        
+    return happiness/(stats["Total people"]+1)
+
+def bring_people():
+    if stats["House space"]>0 and stats["Appeal"]>0:
+        if stats["Appeal"]*0.01>random.random():
+            stats["Total people"]+=1
+            stats["Unassigned people"]+=1
+
+
+def assign_handler(string,number,code = 1):
+    if code!=1:
+        if number>stats[string]:
+            number = stats[string]
+    stats["Unassigned people"]-=(number*code)
+    stats["People logging"]+=(number*code)
+    
+
+def assign_people():
+    while True:
+        choice = input("To assign to a category, enter ('a').  To remove from a category, enter ('r').  If you are satisfied, just press enter:")
+        if choice == "a":
+            category = input("Assign them to: logging ('l'), quarrying ('q'), metalworking ('m'), forest improvements ('i'), or press enter to return:")
+            number = input("How many people will you assign?:")
+            if number.isnumeric():
+                number = int(number)
+            else:
+                number = 0
+            if number>stats["Unassigned people"]:
+                number = stats["Unassigned people"]
+            if category == "l":
+                assign_handler("People logging",number)
+            elif category == "q":
+                assign_handler("People mining",number)
+            elif category == "m":
+                assign_handler("People metalworking",number)
+            elif category == "i":
+                assign_handler("People clearing",number)
+        elif choice == "r":
+            category = input("Remove from: logging ('l'), quarrying ('q'), metalworking ('m'), forest improvements ('i'), or press enter to return:")
+            number = input("How many people will you remove?:")
+            if number.isnumeric():
+                number = int(number)
+            else:
+                number = 0
+            if category == "l":
+                assign_handler("People logging",number,-1)
+            if category == "q":
+                assign_handler("People mining",number,-1)
+            if category == "m":
+                assign_handler("People metalworking",number,-1)
+            if category == "i":
+                assign_handler("People clearing",number,-1)
+        else:
+            break
+
+
+def men_at_work(turns):
+    clearers = stats["People clearing"]
+    stats["Improvements per turn"] = int(stats["People's happiness"]*0.1*clearers)
+    for i in range(0, stats["Improvements per turn"]*turns):
+        tiles = map_height*map_width-1
+        counter = 0
+        while True:
+            place = random.randint(0,tiles)
+            row = int(place/map_width)
+            col = place-row*map_width
+            if grid[row][col] in improvable_paths:
+                grid[row][col] = paths[paths.index(grid[row][col])-1]
+                break
+            counter+=1
+            if counter>20:
+                break
+    loggers = stats["People logging"]
+    stats["Logs per turn"] = int(stats["People's happiness"]*0.1*loggers)
+    stats["Stored logs"]+=turns*stats["Logs per turn"]
+    miners = stats["People mining"]
+    stats["Stone per turn"] = int(stats["People's happiness"]*0.1*miners*stats["Quarries sum level"])
+    stats["Stored stone"]+=turns*stats["Stone per turn"]
+    metalworkers = stats["People metalworking"]
+    stats["Metal per turn"] = int(stats["People's happiness"]*0.1*miners*stats["Metalworks sum level"])
+    stats["Stored metal"]+=turns*stats["Metal per turn"]
+    
+
+def status_gen():
+    global player_pos
+    if player_pos=="#":
+        stats["Status"] = "You stand in thick vegetation."
+    elif player_pos=="&":
+        stats["Status"] = "You stand in waist high vegetation."
+    elif player_pos=="%":
+        stats["Status"] = "You stand in knee high grass."
+    elif player_pos==".":
+        stats["Status"] = "You stand on a rocky path."
+    elif player_pos=="x":
+        stats["Status"] = "You stand on a dirt path."
+    elif player_pos=="*":
+        stats["Status"] = "You stand on a much trodden path."
+    elif player_pos=="@":
+        stats["Status"] = "You stand on a well-maintained trail."
+    elif player_pos=="X":
+        stats["Status"] = "You stand on a paved road."
+    if player_pos in undeveloped_levels:
+        if random.random()<0.05:
+            stats["Status"] = "You twist your ankle."
+            stats["Health"]-=1
+        if random.random()<0.08:
+            stats["Status"] = "You find a huge bush of delcious strawberries."
+            stats["Food"] = 100
+
+def handler(choice):
+    global grid
+    if choice == "a" or choice == "w" or choice == "s" or choice == "d":
+        grid = move_player(choice)
+    elif choice == "b":
+        grid = build()
+    elif choice == "x":
+        grid = destroy()
+    elif choice == "i":
+        grid = interact()
+    elif choice == "u":
+        grid = upgrade()
+    elif choice == "p":
+        assign_people()
+    return grid
+
+
+choice = input("You are about to generate a random map based on some presets.  Do you want normal ('n'), thick forest ('f'), thin forest ('t'), islands ('i'), or swamp ('s')?:")
+spawns = 0
+spread = 0
+cycles = 0
+tolerance = 0
+ruggedness = 0
+
+
+if choice == "n":
+    spawns = 3
+    spread = 0.5
+    cycles = 100
+    tolerance = 5
+    ruggedness = 1.5
+if choice == "f":
+    spawns = 1
+    spread = 0.5
+    cycles = 100
+    tolerance = 5
+    ruggedness = 2
+if choice == "t":
+    spawns = 2
+    spread = 0.5
+    cycles = 100
+    tolerance = 5
+    ruggedness = 0.75
+if choice == "i":
+    spawns = 5
+    spread = 0.5
+    cycles = 100
+    tolerance = 4
+    ruggedness = 1
+if choice == "s":
+    spawns = 5
+    spread = 0.5
+    cycles = 100
+    tolerance = 4
+    ruggedness = 0.25
 road = draw_road()
-grid = draw_streams(3,0.5,1)
-grid = erode(100,5)
-grid = draw_land(1.5)
+grid = draw_streams(spawns,spread,1)
+grid = erode(cycles,tolerance)
+grid = draw_land(ruggedness)
 place_player()
+status_gen()
+appeal_arr = appeal_calc()
+stats["House space"] = appeal_arr[0]
+stats["Appeal"] = appeal_arr[1]
+stats["Standing on"] = player_pos
+stats["People's happiness"] = happiness_calc()
 print(header)
 print_board()
 print(road)
+turns = stats["Turns without sleep"]
 while True:
+    bring_people()
     choice = input("Make your move:")
+    orig_status = stats["Status"]
     grid = handler(choice)
+    handler_status = stats["Status"]
+    stats["Standing on"] = player_pos
     for i in range(0,100):
         print()
-    grid = regrow()
+    turns_passed = stats["Turns without sleep"]-turns
+    if turns_passed<0:
+        turns_passed = 0
+    stats["Water"] -= int(turns_passed/2)
+    stats["Food"] -=int(turns_passed/5)
+    if stats["Water"]<0:
+        orig_status = 0
+        handler_status = "Dying of thirst!"
+        stats["Health"]-=1
+    if stats["Food"]<0:
+        orig_status = 0
+        handler_status = "Dying of starvation!"
+        stats["Health"]-=0.5
+    if stats["Turns without sleep"]>750:
+        stats["Health"]-=1
+    grid = regrow(0.00033*turns_passed)
+    turns = stats["Turns without sleep"]
+    appeal_arr = appeal_calc()
+    stats["House space"] = appeal_arr[0]
+    stats["Appeal"] = appeal_arr[1]
+    stats["People's happiness"] = happiness_calc()
+    status_gen()
+    if orig_status!=handler_status:
+        stats["Status"] = handler_status
+    men_at_work(turns)
+    if stats["Health"]<0:
+        exit()
     print(header)
     print_board()
     print(road)
 """
-Interact with function
-Destroy function
-Path to road check, will take too long, only allow starting level 3 path from house or other level 3 path
-Improve function
+Add saving
+Put upgrades in unfinished
 """
