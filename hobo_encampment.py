@@ -752,6 +752,7 @@ def load(save_name):
     global stats
     global player_row
     global player_col
+    global player_pos
     grid = []
     string = ""
     file = open(save_name+".txt","r")
@@ -786,6 +787,7 @@ def load(save_name):
     player_coords = find_player()
     player_row = player_coords[0]
     player_col = player_coords[1]
+    player_pos = stats["Standing on"]
 
 def handler(choice):
     global grid
