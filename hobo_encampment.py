@@ -1,4 +1,5 @@
 import random
+from datetime import date
 header = "    __  __ ____   ____   ____     ______ _   __ ______ ___     __  ___ ____   __  ___ ______ _   __ ______\n   / / / // __ \ / __ ) / __ \   / ____// | / // ____//   |   /  |/  // __ \ /  |/  // ____// | / //_  __/\n  / /_/ // / / // __  |/ / / /  / __/  /  |/ // /    / /| |  / /|_/ // /_/ // /|_/ // __/  /  |/ /  / /   \n / __  // /_/ // /_/ // /_/ /  / /___ / /|  // /___ / ___ | / /  / // ____// /  / // /___ / /|  /  / /    \n/_/ /_/ \____//_____/ \____/  /_____//_/ |_/ \____//_/  |_|/_/  /_//_/    /_/  /_//_____//_/ |_/  /_/     "
 path_levels = [".","x","*","@","X"]
 house_levels = ["t","l","h","s","H"]
@@ -14,7 +15,7 @@ upgradeable = [".","x","*","@","t","l","h","s","f","F","g","n","r","R","C","q","
 map_width = 100
 map_height = 29
 grid = [["a" for i in range(map_width)] for j in range(map_height)]
-help_string = "You are represented by the letter G.  Your goal is to survive.\nMove around this map with WASD, being careful not to run out of water and food.\nPlant a garden or make a farm for food, and drink from streams for water.\nUse b to build structures, x to destroy them, and i to interact with them.  Use u to perform upgrades.\nOnce you reach the road and have appealing housing, workers will come to live with you.\nBuild fires by houses to achieve this, and connect to level 3+ paths.\nThey can only come on level 3 and above paths, and you will need these to access stored materials.\n\n\n"
+help_string = "You are represented by the letter G.  Your goal is to survive.\nMove around this map with WASD, being careful not to run out of water and food.\nPlant a garden or make a farm for food, and drink from streams for water.\nUse b to build structures, x to destroy them, and i to interact with them.  Use u to perform upgrades.\nOnce you reach the road and have appealing housing, workers will come to live with you.\nBuild fires by houses to achieve this, and connect to level 3+ paths.\nThey can only come on level 3 and above paths, and you will need these to access stored materials.\nEnter c to save, and h to see this menu again.\n\n\n"
 
 player_row = -1
 player_col = -1
@@ -24,7 +25,7 @@ stats = {"Status":"Hello.","Standing on":" ","Health":15,"Water":100,"Food":100,
 upgrades array format is wood, stone, metal
 """
 upgrades = {"Path":[[2,0,0],[5,2,0],[5,3,0],[10,5,1]],"House":[[10,0,0],[10,5,0],[20,10,5],[50,25,20]],"Fire":[[3,1,0],[5,3,1]],"Garden":[[10,0,0],[10,5,0]],"Farm":[[15,0,0],[20,5,0],[25,10,3]],"Quarry":[[100,20,0],[250,50,10]],"Metalworks":[[250,100,10],[500,250,50]]}
-
+save_name = "default"
 
 def add_to_road(road,to_add=" "):
     for i in range(0,map_width):
@@ -369,15 +370,44 @@ def interact():
     if grid[new_row][new_col] == "?":
         unf_index = pull_from_unfinished(new_row,new_col)
         todo = stats["Unfinished"][unf_index]
-        if stats["Logs"]>=todo[3]:
-            stats["Logs"]-=todo[3]
-            grid[new_row][new_col] = todo[0]
-            del stats["Unfinished"][unf_index]
-        else:
-            stats["Unfinished"][unf_index][3]-=stats["Logs"]
-            stats["Logs"] = 0
-        stats["Status"] = "You work on an old project."
-        return grid
+        if len(todo)==4:
+            if stats["Logs"]>=todo[3]:
+                stats["Logs"]-=todo[3]
+                grid[new_row][new_col] = todo[0]
+                del stats["Unfinished"][unf_index]
+            else:
+                stats["Unfinished"][unf_index][3]-=stats["Logs"]
+                stats["Logs"] = 0
+            stats["Status"] = "You work on an old project."
+            return grid
+        if len(todo)==6:
+            if stats["Logs"]>=todo[3] and stats["Stone"]>=todo[4] and stats["Metal"]>=todo[5]:
+                stats["Logs"]-=todo[3]
+                stats["Stone"]-=todo[4]
+                stats["Metal"]-=todo[5]
+                grid[new_row][new_col] = todo[0]
+                del stats["Unfinished"][unf_index]
+            else:
+                if stats["Unfinished"][unf_index][3]>=stats["Logs"]:
+                    stats["Unfinished"][unf_index][3]-=stats["Logs"]
+                    stats["Logs"] = 0
+                else:
+                    stats["Logs"] -= stats["Unfinished"][unf_index][3]
+                    stats["Unfinished"][unf_index][3]=0
+                if stats["Unfinished"][unf_index][4]>=stats["Stone"]:
+                    stats["Unfinished"][unf_index][4]-=stats["Stone"]
+                    stats["Stone"] = 0
+                else:
+                    stats["Stone"] -= stats["Unfinished"][unf_index][4]
+                    stats["Unfinished"][unf_index][4]=0
+                if stats["Unfinished"][unf_index][5]>=stats["Metal"]:
+                    stats["Unfinished"][unf_index][5]-=stats["Metal"]
+                    stats["Metal"] = 0
+                else:
+                    stats["Metal"] -= stats["Unfinished"][unf_index][5]
+                    stats["Unfinished"][unf_index][5]=0
+            stats["Status"] = "You work on an old project."
+            return grid
     if grid[new_row][new_col] in quarry_levels:
         stats["Stone"]+=quarry_levels.index(grid[new_row][new_col])+1
         if stats["Stone"]>3:
@@ -494,7 +524,8 @@ def upgrade_handler(string,levels,letter,new_row,new_col):
             stats["Metal"] = 0
         else:
             stats["Metal"]-=cost_arr[2]
-        todo = [letter,new_row,new_col,logs,stone,metal]
+        grid[new_row][new_col] = "?"
+        todo = [levels[levels.index(letter)+1],new_row,new_col,logs,stone,metal]
         stats["Unfinished"].append(todo)
     return grid
 
@@ -518,15 +549,12 @@ def upgrade():
         chart = upgrades["Path"]
         index = path_levels.index(letter)
         if index==0:
-            result = apply_costs(chart,index)
-            if result:
-                grid[new_row][new_col] = path_levels[path_levels.index(letter)+1]
+            return upgrade_handler("Path",path_levels,letter,new_row,new_col)
         elif path_3_check(new_row,new_col):
-            result = apply_costs(chart,index)
-            if result:
-                grid[new_row][new_col] = path_levels[path_levels.index(letter)+1]
-                if new_row>=map_height-1:
+            if new_row>=map_height-1:
                     stats["Road unlocked"] = True
+            return upgrade_handler("Path",path_levels,letter,new_row,new_col)
+                
         return grid
     elif letter in house_levels:
         return upgrade_handler("House",house_levels,letter,new_row,new_col)
@@ -677,6 +705,88 @@ def status_gen():
             stats["Status"] = "You find a huge bush of delicious strawberries."
             stats["Food"] = 100
 
+
+def save():
+    string = ""
+    for row in range(0,map_height):
+        for col in range(0,map_width):
+            string+=grid[row][col]
+        string+="\n"
+    string+="-----"
+    for key in stats:
+        string+=str(stats[key])+"~"
+    file = open(save_name+".txt","w")
+    file.write(string)
+    file.close()
+
+
+def list_string_to_2d(string):
+    lst = []
+    string = string[1:len(string)-1]
+    entries = string.split("],[")
+    for i in range(0,len(entries)-1):
+        entries[i] = entries[i].replace("]","")
+        entries[i] = entries[i].replace("[","")
+        entries[i] = entries[i].replace("'","")
+        entries[i] = entries[i].replace(" ","")
+        row = entries[i].split(",")
+        lst.append(row)
+    return lst
+
+
+def find_player():
+    for row in range(0,map_height):
+        for col in range(0,map_width):
+            if grid[row][col]=="G":
+                return [row,col]
+
+
+def split(word): 
+    return [char for char in word]
+
+
+def load(save_name):
+    global map_height
+    global map_width
+    global grid
+    global stats
+    global player_row
+    global player_col
+    grid = []
+    string = ""
+    file = open(save_name+".txt","r")
+    for line in file:
+        string+=line
+    two_parts = string.split("-----")
+    map_string = two_parts[0]
+    stats_string = two_parts[1]
+    rows = map_string.split("\n")
+    map_height = len(rows)-1
+    map_width = len(rows[0])
+    for i in range(0,map_height):
+        row = split(rows[i])
+        grid.append(row)
+    stats_rows = stats_string.split("~")
+    counter = 0
+    for key in stats:
+        if stats_rows[counter].isnumeric():
+            if len(stats_rows[counter].split("."))>1:
+                stats[key] = float(stats_rows[counter])
+            else:
+                stats[key] = int(stats_rows[counter])
+        elif stats_rows[counter] == "True":
+            stats[key] = True
+        elif stats_rows[counter] == "False":
+            stats[key] = False
+        elif "[" in stats_rows[counter]:
+            stats[key] = list_string_to_2d(stats_rows[counter])
+        else:
+            stats[key] = stats_rows[counter]
+        counter+=1
+    player_coords = find_player()
+    player_row = player_coords[0]
+    player_col = player_coords[1]
+
 def handler(choice):
     global grid
     if choice == "a" or choice == "w" or choice == "s" or choice == "d":
@@ -694,58 +804,79 @@ def handler(choice):
     elif choice == "h":
         print(help_string)
         input("Press enter when done:")
+    elif choice == "c":
+        save()
     return grid
 
-print(help_string)
-choice = input("You are about to generate a random map based on some presets.  Do you want normal ('n'), thick forest ('f'), thin forest ('t'), islands ('i'), or swamp ('s')?:")
-spawns = 0
-spread = 0
-cycles = 0
-tolerance = 0
-ruggedness = 0
+new_game = input("Do you want to start a new game ('s') or load an old one? ('l'):")
+if new_game == "l":
+    while True:
+        save_name = input("Enter the filename, without .txt:")
+        try:
+            load(save_name)
+            break
+        except:
+            choice = input("This is not a valid save. Type 'n' to make a new save, or enter to try again.")
+            if choice=="n":
+                new_game = "s"
+                break
+if new_game!="l":
+    save_name = input("What will the save name be?:")
+    if save_name.strip()=="":
+        save_name = str(date.today())
+    print(help_string)
+    choice = input("You are about to generate a random map based on some presets.  Do you want normal ('n'), thick forest ('f'), thin forest ('t'), islands ('i'), or swamp ('s')?:")
+    spawns = 0
+    spread = 0
+    cycles = 0
+    tolerance = 0
+    ruggedness = 0
 
 
-if choice == "n":
-    spawns = 3
-    spread = 0.5
-    cycles = 100
-    tolerance = 5
-    ruggedness = 1.5
-if choice == "f":
-    spawns = 1
-    spread = 0.5
-    cycles = 100
-    tolerance = 5
-    ruggedness = 2
-if choice == "t":
-    spawns = 2
-    spread = 0.5
-    cycles = 100
-    tolerance = 5
-    ruggedness = 0.75
-if choice == "i":
-    spawns = 5
-    spread = 0.5
-    cycles = 100
-    tolerance = 4
-    ruggedness = 1
-if choice == "s":
-    spawns = 5
-    spread = 0.5
-    cycles = 100
-    tolerance = 4
-    ruggedness = 0.25
+    if choice == "f":
+        spawns = 1
+        spread = 0.5
+        cycles = 100
+        tolerance = 5
+        ruggedness = 2
+    if choice == "t":
+        spawns = 2
+        spread = 0.5
+        cycles = 100
+        tolerance = 5
+        ruggedness = 0.75
+    if choice == "i":
+        spawns = 5
+        spread = 0.5
+        cycles = 100
+        tolerance = 4
+        ruggedness = 1
+    if choice == "s":
+        spawns = 5
+        spread = 0.5
+        cycles = 100
+        tolerance = 4
+        ruggedness = 0.25
+    else:
+        spawns = 3
+        spread = 0.5
+        cycles = 100
+        tolerance = 5
+        ruggedness = 1.5
+    grid = draw_streams(spawns,spread,1)
+    grid = erode(cycles,tolerance)
+    grid = draw_land(ruggedness)
+    place_player()
+    status_gen()
+    appeal_arr = appeal_calc()
+    stats["House space"] = appeal_arr[0]
+    stats["Appeal"] = appeal_arr[1]
+    stats["Standing on"] = player_pos
+    stats["People's happiness"] = happiness_calc()
+
+
 road = draw_road()
-grid = draw_streams(spawns,spread,1)
-grid = erode(cycles,tolerance)
-grid = draw_land(ruggedness)
-place_player()
-status_gen()
-appeal_arr = appeal_calc()
-stats["House space"] = appeal_arr[0]
-stats["Appeal"] = appeal_arr[1]
-stats["Standing on"] = player_pos
-stats["People's happiness"] = happiness_calc()
+save()
 print(header)
 print_board()
 print(road)
@@ -790,6 +921,5 @@ while True:
     print_board()
     print(road)
 """
-Add saving
-Put upgrades in unfinished
+
 """
