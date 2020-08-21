@@ -26,6 +26,9 @@ Once people have come to your camp, use 'p' to assign them.
 Level 3 paths must be built by a house or by another level 3 path.  These are significant because they allow road access, fast travel, and material access.
 Save your game with 'c', and get a similar help blurb with 'h'.  
 
+Recommended way to run:
+Python IDLE, full screen, font size 14, dark theme (blue background, white text)
+
 
 If you encounter bugs, have an idea for a feature, or have other insights into this game, please email me at ajs2290@g.rit.edu.
 The code for this game is not optimized completely, and there are some obvious improvements to be made (701-737).  However, part of this game's philosophy
