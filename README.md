@@ -28,6 +28,7 @@ Save your game with 'c', and get a similar help blurb with 'h'.
 
 Recommended way to run:
 Python IDLE, full screen, font size 14, dark theme (blue background, white text)
+https://www.python.org/ftp/python/3.8.5/python-3.8.5.exe
 
 
 If you encounter bugs, have an idea for a feature, or have other insights into this game, please email me at ajs2290@g.rit.edu.
