@@ -4,6 +4,7 @@ Hobo Encampment (HE) is a unique game in the sense that all save data is shown o
 This means saves are very modifiable for your own experimentation.
 Start a playthrough by loading an old save or making a new game.  These will be saved to the folder that your game file is in.  I recommend normal mode for a map,
 as the values are optimized for a high quality world.
+The first step is finding the character 'G' on your map.  This is you.  You cannot leave the map.
 Once you are in, you will move with WASD, followed by the enter key.  You cannot walk on water, and moving through unimproved land ('%','&','#') will be harder than
 on paths.  You will gain one log for each movement on this land, however.
 You may injure yourself crossing unimproved land, but you also may find food.  Once you cross land enough, it will turn into a basic path. to 
@@ -24,3 +25,10 @@ If you go too long without sleep, you will be become lost.  Sleep in beds!  This
 Once people have come to your camp, use 'p' to assign them.
 Level 3 paths must be built by a house or by another level 3 path.  These are significant because they allow road access, fast travel, and material access.
 Save your game with 'c', and get a similar help blurb with 'h'.  
+
+
+If you encounter bugs, have an idea for a feature, or have other insights into this game, please email me at ajs2290@g.rit.edu.
+The code for this game is not optimized completely, and there are some obvious improvements to be made (701-737).  However, part of this game's philosophy
+is that all save data should generally look like a screenshot of the game, with some changes, but suggesting the use of dataclasses and an array of houses
+to make the appeal_calc() function faster is not the point of the game.  TIP: to find your character 'G' easier, change the 'G' in line 168 to the word 'YOU'.
+This will go back to being a 'G' after one cycle.
