@@ -906,7 +906,12 @@ while True:
         handler_status = "Dying of starvation!"
         stats["Health"]-=0.5
     if stats["Turns without sleep"]>750:
-        stats["Health"]-=1
+        stats["Turns without sleep"] = 0
+        stats["Logs"] = 0
+        stats["Stone"] = 0
+        stats["Metal"] = 0
+        grid[player_row][player_col] = player_pos
+        place_player()
     grid = regrow(0.00033*turns_passed)
     turns = stats["Turns without sleep"]
     appeal_arr = appeal_calc()
