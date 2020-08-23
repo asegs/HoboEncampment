@@ -384,6 +384,7 @@ def destroy():
         return grid
     if grid[new_row][new_col] in undeveloped_levels:
         stats["Status"] = "Clear this land by walking back and forth on it."
+        return grid
     elif grid[new_row][new_col]=="?":
         del stats["Unfinished"][pull_from_unfinished(new_row,new_col)]
     elif grid[new_row][new_col] in fire_levels:
