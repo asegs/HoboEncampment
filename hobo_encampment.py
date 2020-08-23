@@ -738,11 +738,9 @@ def happiness_calc():
     for row in range(0,map_height):
         for col in range(0,map_width):
             if grid[row][col] in farm_levels:
-                print("FARM")
                 food[get_absolute_pos(row,col)] = grid[row][col]
                 happiness += 3*(farm_levels.index(grid[row][col])+1)
             if grid[row][col] in garden_levels:
-                print("GARDEN")
                 food[get_absolute_pos(row,col)] = grid[row][col]
                 happiness += 2*(garden_levels.index(grid[row][col])+1)        
     return happiness/(stats["Total people"]+1)
