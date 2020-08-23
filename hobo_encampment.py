@@ -20,6 +20,8 @@ help_string = "You are represented by the letter G.  Your goal is to survive.\nM
 player_row = -1
 player_col = -1
 player_pos = " "
+##char,campfire_score
+houses = {}
 stats = {"Status":"Hello.","Standing on":" ","Health":10,"Water":100,"Food":100,"Turns without sleep":0,"Logs":0,"Stone":0,"Metal":0,"Stored logs":0,"Stored stone":0,"Stored metal":0,"House space":0,"Appeal":0,"Total people":0,"Unassigned people":0,"People logging":0,"People mining":0,"People metalworking":0,"People clearing":0,"Logs per turn":0,"Stone per turn":0,"Metal per turn":0,"Improvements per turn":0,"People's happiness":0,"Quarries sum level":0,"Metalworks sum level":0,"Road unlocked":False,"Unfinished":[]}
 """
 upgrades array format is wood, stone, metal
@@ -63,6 +65,16 @@ def if_borders(borders,row,col,diag=False):
     if diag:
         has_border = is_object(borders,row-1,col-1) or is_object(borders,row+1,col-1) or is_object(borders,row-1,col+1) or is_object(borders,row+1,col+1)
     return has_border or is_object(borders,row-1,col) or is_object(borders,row,col-1) or is_object(borders,row,col+1) or is_object(borders,row+1,col)
+
+
+def get_absolute_pos(row,col):
+    return row*map_width+col
+
+
+def get_coords_from_abs(absolute):
+    row = int(absolute/map_width)
+    col = absolute-row*map_width
+    return [row,col]
 
 
 def draw_streams(initial_waters = 3,water_percentage = 0.5,traces=1):
@@ -142,6 +154,29 @@ def count_borders(obj,row,col,diag=True):
     return count
     
 
+
+def calc_fire_score(row,col):
+    score = 0
+    for i in range(0,len(fire_levels)):
+        count = count_borders(fire_levels[i],row,col,True)
+        score+=(count*(i+1))
+    return score
+
+
+def get_houses_by(row,col):
+    global grid
+    numbers = []
+    pos = [0,-1,-1,0,1,0,0,1]
+    for i in range(0,8,2):
+        try:
+            if grid[row+pos[i]][col+pos[i+1]] in house_levels:
+                numbers.append(get_absolute_pos(row+pos[i],col+pos[i+1]))
+        except:
+            pass
+    return numbers
+            
+    
+        
 def erode(cycles=5,tolerance=6):
     for i in range(0,cycles):
         for row in range(0,map_height):
@@ -268,6 +303,7 @@ def build():
     global player_row
     global player_col
     global stats
+    global houses
     if player_pos not in path_levels:
         stats["Status"] = "You must be on a path to build."
         return grid
@@ -295,10 +331,16 @@ def build():
         grid = build_params(1,"0",new_row,new_col)
     elif choice == "h":
         grid = build_params(5,"t",new_row,new_col)
+        if grid[new_row][new_col]!="?":
+            houses[get_absolute_pos(new_row,new_col)] = [grid[new_row][new_col],calc_fire_score(new_row,new_col)]
     elif choice == "b":
         grid = build_params(3,".",new_row,new_col)
     elif choice == "c":
         grid = build_params(1,"f",new_row,new_col)
+        if grid[new_row][new_col]!="?":
+            numbers = get_houses_by(new_row,new_col)
+            for i in numbers:
+                houses[i][1]+=1
     elif choice == "g":
         grid = build_params(4,"g",new_row,new_col)
     elif choice == "f":
@@ -326,6 +368,7 @@ def pull_from_unfinished(row,col):
 def destroy():
     global player_row
     global player_col
+    global houses
     direction = input("What adjacent tile do you want to destroy? (WASD or ENTER to close):")
     coords = select_new(direction)
     new_row = coords[0]
@@ -333,15 +376,23 @@ def destroy():
     if new_row == player_row and new_col == player_col:
         stats["Status"] = "You cannot destroy yourself.  That way, at least."
         return grid
-    if grid[new_row][new_col]=="?":
+    elif grid[new_row][new_col]=="?":
         del stats["Unfinished"][pull_from_unfinished(new_row,new_col)]
-    if grid[new_row][new_col] in quarry_levels:
+    elif grid[new_row][new_col] in fire_levels:
+        numbers = get_houses_by(new_row,new_col)
+        level = fire_levels.index(grid[new_row][new_col])+1
+        for i in numbers:
+            houses[i][1]-=level
+    elif grid[new_row][new_col] in house_levels:
+        houses.pop(get_absolute_pos(new_row,new_col))
+    elif grid[new_row][new_col] in quarry_levels:
         level = quarry_levels[quarry_levels.index(grid[new_row][new_col])+1]
         stats["Quarries sum level"]-=level
-    if grid[new_row][new_col] in metalworks_levels:
+    elif grid[new_row][new_col] in metalworks_levels:
         level = metalworks_levels[metalworks_levels.index(grid[new_row][new_col])+1]
         stats["Metalworks sum level"]-=level
-    grid[new_row][new_col] = "."
+    elif grid[new_row][new_col]!=" ":
+        grid[new_row][new_col] = "."
     return grid
 
 
@@ -360,6 +411,7 @@ def place_stored(stored_string,string,number):
 def interact():
     global player_row
     global player_col
+    global houses
     direction = input("What adjacent tile do you want to interact with? (WASD or ENTER to close):")
     coords = select_new(direction)
     new_row = coords[0]
@@ -374,6 +426,12 @@ def interact():
             if stats["Logs"]>=todo[3]:
                 stats["Logs"]-=todo[3]
                 grid[new_row][new_col] = todo[0]
+                if grid[new_row][new_col] in house_levels:
+                    houses[get_absolute_pos(new_row,new_col)] = [grid[new_row][new_col],calc_fire_score(new_row,new_col)]
+                elif grid[new_row][new_col] in fire_levels:
+                    numbers = get_houses_by(new_row,new_col)
+                    for i in numbers:
+                        houses[i][1]+=1
                 del stats["Unfinished"][unf_index]
             else:
                 stats["Unfinished"][unf_index][3]-=stats["Logs"]
@@ -386,6 +444,12 @@ def interact():
                 stats["Stone"]-=todo[4]
                 stats["Metal"]-=todo[5]
                 grid[new_row][new_col] = todo[0]
+                if grid[new_row][new_col] in house_levels:
+                    houses[get_absolute_pos(new_row,new_col)] = [grid[new_row][new_col],calc_fire_score(new_row,new_col)]
+                elif grid[new_row][new_col] in fire_levels:
+                    numbers = get_houses_by(new_row,new_col)
+                    for i in numbers:
+                        houses[i][1]+=1
                 del stats["Unfinished"][unf_index]
             else:
                 if stats["Unfinished"][unf_index][3]>=stats["Logs"]:
@@ -534,6 +598,7 @@ def upgrade():
     global player_row
     global player_col
     global grid
+    global houses
     direction = input("What adjacent tile do you want to upgrade? (WASD or ENTER to close):")
     coords = select_new(direction)
     new_row = coords[0]
@@ -557,9 +622,22 @@ def upgrade():
                 
         return grid
     elif letter in house_levels:
-        return upgrade_handler("House",house_levels,letter,new_row,new_col)
+        orig_letter = grid[new_row][new_col]
+        grid = upgrade_handler("House",house_levels,letter,new_row,new_col)
+        new_letter = grid[new_row][new_col]
+        if new_letter != orig_letter and new_letter != "?":
+            houses[get_absolute_pos(new_row,new_col)][0] = new_letter
+        elif new_letter == "?":
+            houses.pop(get_absolute_pos(new_row,new_col))
+        return grid
     elif letter in fire_levels:
-        return upgrade_handler("Fire",fire_levels,letter,new_row,new_col)
+        orig_letter = grid[new_row][new_col]        
+        grid = upgrade_handler("Fire",fire_levels,letter,new_row,new_col)
+        if new_letter != orig_letter:
+            numbers = get_houses_by(new_row,new_col)
+            for i in numbers:
+                houses[i]+=1
+        return grid
     elif letter in garden_levels:
         return upgrade_handler("Garden",garden_levels,letter,new_row,new_col)
     elif letter in farm_levels:
@@ -571,22 +649,45 @@ def upgrade():
     return grid
     
 
+
 def appeal_calc():
+    global houses
+    global grid
     house_space = 0
     appeal = 0
     for row in range(0,map_height):
         for col in range(0,map_width):
             if grid[row][col] in house_levels:
                 house_size = house_levels.index(grid[row][col])+1
-                for i in range(0,len(fire_levels)):
-                    count = count_borders(fire_levels[i],row,col,True)
-                    appeal+=(count*(i+1))
+                orig_appeal = appeal
+                appeal+=calc_fire_score(row,col)
+                house = [grid[row][col],appeal-orig_appeal]
+                houses[get_absolute_pos(row,col)] = house
+                print(houses[get_absolute_pos(row,col)])
                 appeal = appeal*house_size
                 house_space+=house_size
     if not stats["Road unlocked"]:
         appeal = 0
     house_space-=stats["Total people"]
-    return [house_space,appeal]
+    stats["Appeal"] = appeal
+    stats["House space"] = house_space
+
+
+def update_appeal():
+    global houses
+    global stats
+    appeal = 0
+    housing_space = 0
+    for key in houses:
+        house = houses[key]
+        level = house_levels.index(house[0])+1
+        appeal+=(level*house[1])
+        housing_space += level
+    if not stats["Road unlocked"]:
+        appeal = 0
+    stats["Appeal"] = appeal
+    stats["Housing space"] = housing_space-stats["Total people"]
+
 
 def happiness_calc():
     happiness = 0
@@ -784,6 +885,7 @@ def load(save_name):
         else:
             stats[key] = stats_rows[counter]
         counter+=1
+    appeal_calc()
     player_coords = find_player()
     player_row = player_coords[0]
     player_col = player_coords[1]
@@ -810,6 +912,11 @@ def handler(choice):
         save()
     return grid
 
+
+def set_terrain_values(spa,spr,cy,tol,rug):
+    return [spa,spr,cy,tol,rug]
+
+
 new_game = input("Do you want to start a new game ('s') or load an old one? ('l'):")
 if new_game == "l":
     while True:
@@ -834,45 +941,25 @@ if new_game!="l":
     tolerance = 0
     ruggedness = 0
 
-
+    terrain = []
+    
     if choice == "f":
-        spawns = 1
-        spread = 0.5
-        cycles = 100
-        tolerance = 5
-        ruggedness = 2
+        terrain = set_terrain_values(1,0.5,100,5,2)
     if choice == "t":
-        spawns = 2
-        spread = 0.5
-        cycles = 100
-        tolerance = 5
-        ruggedness = 0.75
+        terrain = set_terrain_values(2,0.5,100,5,0.75)
     if choice == "i":
-        spawns = 5
-        spread = 0.5
-        cycles = 100
-        tolerance = 4
-        ruggedness = 1
+        terrain = set_terrain_values(5,0.5,100,4,1)
     if choice == "s":
-        spawns = 5
-        spread = 0.5
-        cycles = 100
-        tolerance = 4
-        ruggedness = 0.25
+        terrain = set_terrain_values(5,0.5,100,4,0.25)
     else:
-        spawns = 3
-        spread = 0.5
-        cycles = 100
-        tolerance = 5
-        ruggedness = 1.5
+        terrain = set_terrain_values(3,0.5,100,5,1.5)
+    spawns,spread, cycles,tolerance,ruggedness = [terrain[i] for i in (0,1,2,3,4)] 
     grid = draw_streams(spawns,spread,1)
     grid = erode(cycles,tolerance)
     grid = draw_land(ruggedness)
     place_player()
     status_gen()
-    appeal_arr = appeal_calc()
-    stats["House space"] = appeal_arr[0]
-    stats["Appeal"] = appeal_arr[1]
+    appeal_calc()
     stats["Standing on"] = player_pos
     stats["People's happiness"] = happiness_calc()
 
@@ -884,13 +971,14 @@ print_board()
 print(road)
 turns = stats["Turns without sleep"]
 while True:
+    print(houses)
     bring_people()
     choice = input("Make your move:")
     orig_status = stats["Status"]
     grid = handler(choice)
     handler_status = stats["Status"]
     stats["Standing on"] = player_pos
-    for i in range(0,100):
+    for i in range(0,22):
         print()
     turns_passed = stats["Turns without sleep"]-turns
     if turns_passed<0:
@@ -906,17 +994,10 @@ while True:
         handler_status = "Dying of starvation!"
         stats["Health"]-=0.5
     if stats["Turns without sleep"]>750:
-        stats["Turns without sleep"] = 0
-        stats["Logs"] = 0
-        stats["Stone"] = 0
-        stats["Metal"] = 0
-        grid[player_row][player_col] = player_pos
-        place_player()
+        stats["Health"]-=1
     grid = regrow(0.00033*turns_passed)
     turns = stats["Turns without sleep"]
-    appeal_arr = appeal_calc()
-    stats["House space"] = appeal_arr[0]
-    stats["Appeal"] = appeal_arr[1]
+    update_appeal()
     stats["People's happiness"] = happiness_calc()
     status_gen()
     if orig_status!=handler_status:
