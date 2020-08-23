@@ -22,6 +22,8 @@ player_col = -1
 player_pos = " "
 ##char,campfire_score
 houses = {}
+##just grid char
+food = {}
 stats = {"Status":"Hello.","Standing on":" ","Health":10,"Water":100,"Food":100,"Turns without sleep":0,"Logs":0,"Stone":0,"Metal":0,"Stored logs":0,"Stored stone":0,"Stored metal":0,"House space":0,"Appeal":0,"Total people":0,"Unassigned people":0,"People logging":0,"People mining":0,"People metalworking":0,"People clearing":0,"Logs per turn":0,"Stone per turn":0,"Metal per turn":0,"Improvements per turn":0,"People's happiness":0,"Quarries sum level":0,"Metalworks sum level":0,"Road unlocked":False,"Unfinished":[]}
 """
 upgrades array format is wood, stone, metal
@@ -304,7 +306,7 @@ def build():
     global player_col
     global stats
     global houses
-    if player_pos not in path_levels:
+    if player_pos in undeveloped_levels:
         stats["Status"] = "You must be on a path to build."
         return grid
     choice = input("Enter the structure to build: log holder ('l'), house ('h'), bridge ('b'), campfire ('c'), garden ('g'),farm ('f'), quarry ('q'), metalworks ('m'), river ('r') or enter to close:")
@@ -327,6 +329,8 @@ def build():
     except:
         stats["Status"] = "You can't build over there."
         return grid
+    if grid[new_row][new_col] not in paths:
+        stats["Status"] = "Destroy that first!"
     if choice == "l":
         grid = build_params(1,"0",new_row,new_col)
     elif choice == "h":
@@ -343,8 +347,10 @@ def build():
                 houses[i][1]+=1
     elif choice == "g":
         grid = build_params(4,"g",new_row,new_col)
+        food[get_absolute_pos(new_row,new_col)] = "g"
     elif choice == "f":
         grid = build_params(7,"r",new_row,new_col)
+        food[get_absolute_pos(new_row,new_col)] = "r"
     elif choice == "q":
         grid = build_params(50,"q",new_row,new_col)
         stats["Quarries sum level"]+=1
@@ -376,6 +382,8 @@ def destroy():
     if new_row == player_row and new_col == player_col:
         stats["Status"] = "You cannot destroy yourself.  That way, at least."
         return grid
+    if grid[new_row][new_col] in undeveloped_levels:
+        stats["Status"] = "Clear this land by walking back and forth on it."
     elif grid[new_row][new_col]=="?":
         del stats["Unfinished"][pull_from_unfinished(new_row,new_col)]
     elif grid[new_row][new_col] in fire_levels:
@@ -393,6 +401,8 @@ def destroy():
         stats["Metalworks sum level"]-=level
     elif grid[new_row][new_col]!=" ":
         grid[new_row][new_col] = "."
+    elif grid[new_row][new_col] in garden_levels or grid[new_row][new_col] in farm_levels:
+        food.pop(get_absolute_pos(new_row,new_col))
     return grid
 
 
@@ -432,6 +442,8 @@ def interact():
                     numbers = get_houses_by(new_row,new_col)
                     for i in numbers:
                         houses[i][1]+=1
+                elif grid[new_row][new_col] in garden_levels or grid[new_row][new_col] in farm_levels:
+                    food[get_absolute_pos(new_row,new_col)] = grid[new_row][new_col]
                 del stats["Unfinished"][unf_index]
             else:
                 stats["Unfinished"][unf_index][3]-=stats["Logs"]
@@ -447,9 +459,12 @@ def interact():
                 if grid[new_row][new_col] in house_levels:
                     houses[get_absolute_pos(new_row,new_col)] = [grid[new_row][new_col],calc_fire_score(new_row,new_col)]
                 elif grid[new_row][new_col] in fire_levels:
+                    level = fire_levels.index(grid[new_row][new_col])+1
                     numbers = get_houses_by(new_row,new_col)
                     for i in numbers:
-                        houses[i][1]+=1
+                        houses[i][1]+=level
+                elif grid[new_row][new_col] in garden_levels or grid[new_row][new_col] in farm_levels:
+                    food[get_absolute_pos(new_row,new_col)] = grid[new_row][new_col]
                 del stats["Unfinished"][unf_index]
             else:
                 if stats["Unfinished"][unf_index][3]>=stats["Logs"]:
@@ -490,16 +505,26 @@ def interact():
     if grid[new_row][new_col].isnumeric():
         count = int(grid[new_row][new_col])
         choice = input("Place logs ('p') or take logs ('t')?:")
+        number = input("How many?:")
+        if number.isnumeric():
+            number = int(number)
+        else:
+            number = 0
         if choice == "p":
-            if count+stats["Logs"]>=9:
-                stats["Logs"]-=(9-count)
+            if number>stats["Logs"]:
+                number = stats["Logs"]
+            if number+stats["Logs"]>=9:
+                number = 9-count
+                stats["Logs"]-=(number)
                 count = 9
             else:
-                count+=stats["Logs"]
-                stats["Logs"] = 0
+                count+=number
+                stats["Logs"] -=number
         else:
-            stats["Logs"]+=count
-            count = 0
+            if number>count:
+                number = count
+            stats["Logs"]+=number
+            count -=number
         grid[new_row][new_col] = str(count)
     if grid[new_row][new_col] in path_levels:
         print("You can use level 3 and above paths to move materials mined by workers.")
@@ -631,17 +656,36 @@ def upgrade():
             houses.pop(get_absolute_pos(new_row,new_col))
         return grid
     elif letter in fire_levels:
+        level = fire_levels.index(letter)+1
         orig_letter = grid[new_row][new_col]        
         grid = upgrade_handler("Fire",fire_levels,letter,new_row,new_col)
         if new_letter != orig_letter:
             numbers = get_houses_by(new_row,new_col)
-            for i in numbers:
-                houses[i]+=1
+            if new_letter == "?":
+                for i in numbers:
+                    houses[i]-=level
+            else:
+                for i in numbers:
+                    houses[i]+=1
         return grid
     elif letter in garden_levels:
-        return upgrade_handler("Garden",garden_levels,letter,new_row,new_col)
+        orig_letter = grid[new_row][new_col]
+        grid = upgrade_handler("Garden",garden_levels,letter,new_row,new_col)
+        new_letter = grid[new_row][new_col]
+        if new_letter != orig_letter and new_letter != "?":
+            food[get_absolute_pos(new_row,new_col)] = new_letter
+        elif new_letter == "?":
+            food.pop(get_absolute_pos(new_row,new_col))
+        return grid
     elif letter in farm_levels:
-        return upgrade_handler("Farm",farm_levels,letter,new_row,new_col)
+        orig_letter = grid[new_row][new_col]
+        grid = upgrade_handler("Farm",farm_levels,letter,new_row,new_col)
+        new_letter = grid[new_row][new_col]
+        if new_letter != orig_letter and new_letter != "?":
+            food[get_absolute_pos(new_row,new_col)] = new_letter
+        elif new_letter == "?":
+            food.pop(get_absolute_pos(new_row,new_col))
+        return grid
     elif letter in quarry_levels:
         return upgrade_handler("Quarry",quarry_levels,letter,new_row,new_col)
     elif letter in metalworks_levels:
@@ -663,7 +707,6 @@ def appeal_calc():
                 appeal+=calc_fire_score(row,col)
                 house = [grid[row][col],appeal-orig_appeal]
                 houses[get_absolute_pos(row,col)] = house
-                print(houses[get_absolute_pos(row,col)])
                 appeal = appeal*house_size
                 house_space+=house_size
     if not stats["Road unlocked"]:
@@ -686,7 +729,7 @@ def update_appeal():
     if not stats["Road unlocked"]:
         appeal = 0
     stats["Appeal"] = appeal
-    stats["Housing space"] = housing_space-stats["Total people"]
+    stats["House space"] = housing_space-stats["Total people"]
 
 
 def happiness_calc():
@@ -694,10 +737,27 @@ def happiness_calc():
     for row in range(0,map_height):
         for col in range(0,map_width):
             if grid[row][col] in farm_levels:
+                print("FARM")
+                food[get_absolute_pos(row,col)] = grid[row][col]
                 happiness += 3*(farm_levels.index(grid[row][col])+1)
             if grid[row][col] in garden_levels:
+                print("GARDEN")
+                food[get_absolute_pos(row,col)] = grid[row][col]
                 happiness += 2*(garden_levels.index(grid[row][col])+1)        
     return happiness/(stats["Total people"]+1)
+
+
+def update_happiness():
+    global food
+    happiness = 0
+    for key in food:
+        f = food[key]
+        if f in garden_levels:
+            happiness+=(garden_levels.index(f)+1)*2
+        elif f in farm_levels:
+            happiness+=(farm_levels.index(f)+1)*3
+    stats["People's happiness"] = happiness/(stats["Total people"]+1)
+
 
 def bring_people():
     if stats["House space"]>0 and stats["Appeal"]>0:
@@ -886,6 +946,7 @@ def load(save_name):
             stats[key] = stats_rows[counter]
         counter+=1
     appeal_calc()
+    happiness_calc()
     player_coords = find_player()
     player_row = player_coords[0]
     player_col = player_coords[1]
@@ -971,43 +1032,44 @@ print_board()
 print(road)
 turns = stats["Turns without sleep"]
 while True:
-    print(houses)
-    bring_people()
+    bring_people() 
     choice = input("Make your move:")
     orig_status = stats["Status"]
     grid = handler(choice)
     handler_status = stats["Status"]
     stats["Standing on"] = player_pos
-    for i in range(0,22):
+    for i in range(0,25): 
         print()
-    turns_passed = stats["Turns without sleep"]-turns
+    turns_passed = stats["Turns without sleep"]-turns 
     if turns_passed<0:
         turns_passed = 0
     stats["Water"] -= int(turns_passed/2)
     stats["Food"] -=int(turns_passed/5)
-    if stats["Water"]<0:
+    if stats["Water"]<0: 
         orig_status = 0
         handler_status = "Dying of thirst!"
         stats["Health"]-=1
-    if stats["Food"]<0:
+    if stats["Food"]<0: 
         orig_status = 0
         handler_status = "Dying of starvation!"
         stats["Health"]-=0.5
-    if stats["Turns without sleep"]>750:
+    if stats["Turns without sleep"]>750: 
         stats["Health"]-=1
     grid = regrow(0.00033*turns_passed)
     turns = stats["Turns without sleep"]
     update_appeal()
-    stats["People's happiness"] = happiness_calc()
+    update_happiness()
     status_gen()
     if orig_status!=handler_status:
         stats["Status"] = handler_status
     men_at_work(turns_passed)
     if stats["Health"]<0:
         exit()
-    print(header)
+    print(header) 
     print_board()
     print(road)
 """
-
+Editing printed text probably near impossible in py
+Add more status items
+Work on dict of letters to be changed each time
 """
