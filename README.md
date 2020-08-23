@@ -32,7 +32,6 @@ https://www.python.org/ftp/python/3.8.5/python-3.8.5.exe
 
 
 If you encounter bugs, have an idea for a feature, or have other insights into this game, please email me at ajs2290@g.rit.edu.
-The code for this game is not optimized completely, and there are some obvious improvements to be made (701-737).  However, part of this game's philosophy
-is that all save data should generally look like a screenshot of the game, with some changes, but suggesting the use of dataclasses and an array of houses
-to make the appeal_calc() function faster is not the point of the game.  TIP: to find your character 'G' easier, change the 'G' in line 168 to the word 'YOU'.
+The code for this game is not optimized completely.  However, part of this game's philosophy
+is that all save data should generally look like a screenshot of the game, with some changes.  TIP: to find your character 'G' easier, change the 'G' in line 168 to the word 'YOU'.
 This will go back to being a 'G' after one cycle.
