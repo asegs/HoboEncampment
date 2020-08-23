@@ -1037,6 +1037,7 @@ while True:
     grid = handler(choice)
     handler_status = stats["Status"]
     stats["Standing on"] = player_pos
+    ##Comment out loop below if running through cmd for high performance
     for i in range(0,25): 
         print()
     turns_passed = stats["Turns without sleep"]-turns 
